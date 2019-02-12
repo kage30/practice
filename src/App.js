@@ -13,10 +13,11 @@ class App extends React.Component {
         this.state = {
             isLogin:false,
             departmentList : [],
-            user:[],
-            // value:'',
+            departmentId: '',
+            userList:[],
+            totalPage: '',
+            currentPage: '',
             word: '',
-            member:[]
         };
     }
 
@@ -68,12 +69,23 @@ class App extends React.Component {
         return Promise.resolve(res.data.data);
     }
 
+
+
     loadUser(e){
-      return this.httpClient.get('/who/search', {params:{department_id: e.target.value}})
+      const params = {
+        department_id: e.target.value || this.state.departmentId,
+        page: e.target.getAttribute('data-page') || 1,
+        query: this.state.word,
+      };
+      return this.httpClient.get('/who/search', {params:params})
           .then(this.commonResponseHandling)
           .then((result)=>{
-            this.setState({user : result.item_list, page : result.summary.total_pages});
-            console.log(result.summary.total_pages);
+            this.setState({
+              departmentId: params.department_id,
+              userList : result.item_list,
+              totalPage : result.summary.total_pages,
+              currentPage: result.summary.current_page,
+            });
           })
     }
 
@@ -81,16 +93,7 @@ class App extends React.Component {
       this.setState({word: word});
     }
 
-    searchUser(text){
-      text = this.state.word;
-      console.log(text);
-      return this.httpClient.get('/who/search', {params:{query: text}})
-          .then(this.commonResponseHandling)
-          .then((result)=>{
-            console.log(result);
-            this.setState({member:result.item_list});
-          })
-    }
+    
 
     clickHandler = ()=>{
         this.loadUser()
@@ -103,19 +106,23 @@ class App extends React.Component {
 
 
     render() {
+      const memberList = this.state.userList.map((row,index)=>{
+        return <div className='members_card' key={index}>
+        <p className='members_name'>{row.user_name}</p>
+        <img src={row.photo_url} alt={row.user_name} />
+        </div>;
+      })
 
-        return (
-            <div>
-                {/* <ul>
-                    {this.state.departmentList.map((row,index)=>{
-                        return <li key={index}>{row.department_name}</li>;
-                    })}
-                </ul> */}
+      let totalPages = this.state.totalPage;
+      let currentPage = this.state.currentPage;
 
-                <form>
-                  <label>
-                    部署を選択してください 
-                    <select onChange={e => this.loadUser(e)}>
+
+      return (
+          <div>
+              <form>
+                <label>
+                  部署を選択してください 
+                  <select onChange={e => this.loadUser(e)}>
                     <option value='0'>選択してください</option>
                     <option value='2'>MP事業部</option>
                     <option value='3'>OS事業部</option>
@@ -125,34 +132,24 @@ class App extends React.Component {
                     <option value='6'>QAグループ</option>
                     <option value='7'>経営企画室</option>
                     <option value='1'>ニジボックス</option>
-                    </select>
-                  </label>
-                </form>
+                  </select>
+                </label>
+              </form>
 
-                <input type="text" value={this.state.word} onChange={e => this.handleChange(e.target.value)}/>
-                <button onClick={e => this.searchUser(e)}>検索</button>
+              <input type="text" value={this.state.word} onChange={e => this.handleChange(e.target.value)}/>
+              <button onClick={e => this.loadUser(e)}>検索</button>
 
-                <div className='members'>
-                  {this.state.member.map((row,index)=>{
-                          return <div className='members_card' key={index}>
-                          {/* <p className='members_num'>User_id:{row.user_id}</p> */}
-                          <p className='members_name'>氏名:{row.user_name}</p>
-                          <img src={row.photo_url} alt='' />
-                          </div>;
-                      })}
+              <div className='members'>
+                {memberList}
+                <div className="pager">
+                  <button type="button" className="" onClick={e => this.loadUser(e)} data-page={this.state.currentPage - 1} > 前へ</button>
+                  <div className="pager__page">{currentPage}/{totalPages}ページ</div>
+                  <button type="button" className="" onClick={e => this.loadUser(e)} data-page={this.state.currentPage + 1} >次へ</button>
                 </div>
 
-                <div className='members'>
-                  {this.state.user.map((row,index)=>{
-                          return <div className='members_card' key={index}>
-                          <p className='members_name'>氏名:{row.user_name}</p>
-                          <img src={row.photo_url} alt='' />
-                          </div>;
-                      })}
-                </div>
-
-            </div>
-        );
+              </div>
+          </div>
+      );
     }
 }
 
